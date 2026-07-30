@@ -9,6 +9,7 @@ plus two that were silently broken everywhere.
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 import pytest
 
@@ -40,7 +41,7 @@ def test_bundled_default_config_is_parseable():
     assert "speech" in parsed and "app" in parsed
 
     config = load_config()
-    assert config.speech.wake_word == "hey pilot"
+    assert config.speech.wake_word == "hey jarvis"
     assert config.app.name == "VoicePilot"
 
 
@@ -172,6 +173,82 @@ def test_app_launcher_keeps_alias_when_nothing_installed(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Svenska alias
+# ---------------------------------------------------------------------------
+
+def test_swedish_alias_filhanteraren_resolves_to_installed_binary(monkeypatch):
+    """
+    "filhanteraren" är det uttalade svenska namnet som pekar mot nautilus i
+    config-defaulten (AppsSection.aliases). Precis som "files" i den
+    engelska motsvarigheten ovan måste den falla tillbaka till nemo på en
+    Mint-burk där nautilus inte är installerat.
+    """
+    from voicepilot.core.config import AppsSection
+    from voicepilot.executor import app_launcher
+
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "X-Cinnamon")
+    installed = {"nemo", "firefox"}
+    monkeypatch.setattr(
+        app_launcher.shutil,
+        "which",
+        lambda b: f"/usr/bin/{b}" if b in installed else None,
+    )
+    monkeypatch.setattr(
+        desktop.shutil,
+        "which",
+        lambda b: f"/usr/bin/{b}" if b in installed else None,
+    )
+
+    action = app_launcher.AppLauncherAction(app_aliases=AppsSection().aliases)
+
+    assert action._resolve("filhanteraren") == "nemo"
+    assert action._resolve("firefox") == "firefox"
+
+
+def test_folder_alias_nedladdningar_resolves_to_downloads_path():
+    """Mappaliaset "nedladdningar" (default-config) ska peka på ~/Downloads."""
+    from voicepilot.core.config import FoldersSection
+    from voicepilot.executor.file_manager import FileManagerAction
+
+    action = FileManagerAction(folder_aliases=FoldersSection().aliases)
+
+    assert action.folder_aliases["nedladdningar"] == Path("~/Downloads").expanduser()
+
+
+# ---------------------------------------------------------------------------
+# Wake word
+# ---------------------------------------------------------------------------
+
+def test_wake_word_loads_only_one_model():
+    """
+    Regression: att skapa openwakeword.Model() utan argument laddar HELA det
+    medföljande modellpaketet (alexa, hey_mycroft, hey_rhasspy, timer,
+    weather, …), vilket gjorde att detektorn utlöstes av "Alexa" och andra
+    ord som inte hade något med det konfigurerade wake word:et att göra.
+    Bara modellen för det konfigurerade ordet ("hey jarvis") får laddas.
+
+    Kräver att openwakeword och dess förtränade modeller finns nedladdade
+    lokalt — hoppas över annars.
+    """
+    pytest.importorskip("openwakeword")
+
+    from voicepilot.core.exceptions import WakeWordError
+    from voicepilot.speech.wake_word import WakeWordDetector
+
+    detector = WakeWordDetector(wake_word="hey jarvis")
+    try:
+        detector.load()
+    except WakeWordError as exc:
+        pytest.skip(f"openwakeword-modeller inte tillgängliga: {exc}")
+
+    loaded_models = detector._model.models
+    assert len(loaded_models) == 1, (
+        f"exakt en modell ska vara laddad, fick: {list(loaded_models)}"
+    )
+    assert "hey_jarvis" in next(iter(loaded_models))
+
+
+# ---------------------------------------------------------------------------
 # Confirmation manager concurrency
 # ---------------------------------------------------------------------------
 
@@ -240,11 +317,11 @@ def test_confirmation_requires_the_high_risk_phrase():
     manager.handle(_high_risk_command())
 
     # The medium-risk phrase alone must not clear a high-risk command.
-    assert manager.receive_response("confirm") is True
+    assert manager.receive_response("bekräfta") is True
     assert executed == []
     assert manager.has_pending
 
-    assert manager.receive_response("confirm delete") is True
+    assert manager.receive_response("bekräfta radera") is True
     assert len(executed) == 1
     assert not manager.has_pending
 
@@ -260,7 +337,7 @@ def test_cancel_clears_pending_confirmation():
     )
 
     manager.handle(_high_risk_command())
-    assert manager.receive_response("cancel") is True
+    assert manager.receive_response("avbryt") is True
     assert executed == []
     assert not manager.has_pending
 
