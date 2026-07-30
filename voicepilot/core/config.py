@@ -60,11 +60,11 @@ class AppSection(BaseModel):
 
 class SpeechSection(BaseModel):
     activation_mode: str = "wake_word"
-    wake_word: str = "hey pilot"
-    whisper_model: str = "base.en"
+    wake_word: str = "hey jarvis"
+    whisper_model: str = "small"
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
-    language: str = "en"
+    language: str = "sv"
     microphone_index: int | None = None
     sample_rate: int = 16000
     vad_threshold: float = 0.5
@@ -74,9 +74,9 @@ class SpeechSection(BaseModel):
 
 class ConfirmationSection(BaseModel):
     timeout_seconds: int = 10
-    high_risk_phrase: str = "confirm delete"
-    medium_risk_phrase: str = "confirm"
-    cancel_phrase: str = "cancel"
+    high_risk_phrase: str = "bekräfta radera"
+    medium_risk_phrase: str = "bekräfta"
+    cancel_phrase: str = "avbryt"
 
 
 class DictationSection(BaseModel):

@@ -1,5 +1,5 @@
-# VoicePilot — Default Configuration
-# This file is read on first launch. User overrides are stored in ~/.config/voicepilot/config.toml
+# VoicePilot — Standardkonfiguration
+# Denna fil läses in vid första start. Användarens egna inställningar sparas i ~/.config/voicepilot/config.toml
 
 [app]
 name = "VoicePilot"
@@ -8,50 +8,54 @@ data_dir = "~/.local/share/voicepilot"
 log_dir = "~/.local/share/voicepilot/logs"
 
 [speech]
-# Activation mode: "wake_word" | "push_to_talk" | "always_on"
+# Aktiveringsläge: "wake_word" | "push_to_talk" | "always_on"
 activation_mode = "wake_word"
-wake_word = "hey pilot"
-# Whisper model: "tiny.en" | "base.en" | "small.en" | "medium.en"
-whisper_model = "base.en"
+# Aktiveringsfras (wake word). Finns ingen tränad svensk modell i openwakeword,
+# så denna förblir engelsk även om resten av kommandona är på svenska.
+wake_word = "hey jarvis"
+# Whisper-modell: måste vara flerspråkig för att kunna transkribera svenska.
+# "base.en" är engelsk-only och duger inte. "small" är minsta flerspråkiga
+# modell som klarar korta svenska kommandon tillförlitligt.
+whisper_model = "small"
 whisper_device = "cpu"           # "cpu" | "cuda"
 whisper_compute_type = "int8"    # "int8" | "float16" | "float32"
-language = "en"
-# Microphone index — leave commented out to use the system default device.
-# TOML has no null literal; an unset key is how "no value" is expressed.
+language = "sv"
+# Mikrofonindex — låt vara utkommenterad för att använda systemets standardenhet.
+# TOML saknar null-literalen; en okommenterad, ej satt nyckel är hur "inget värde" uttrycks.
 # microphone_index = 1
 sample_rate = 16000
-vad_threshold = 0.5              # Voice activity detection sensitivity (0.0–1.0)
-# Silence duration (seconds) before finalizing speech chunk
+vad_threshold = 0.5              # Känslighet för röstaktivitetsdetektering (0.0–1.0)
+# Tystnadens längd (sekunder) innan talsegmentet slutförs
 silence_duration = 1.2
 max_recording_seconds = 30
 
 [confirmation]
-# Timeout (seconds) to wait for voice confirmation before auto-cancel
+# Timeout (sekunder) att vänta på röstbekräftelse innan automatisk avbrytning
 timeout_seconds = 10
-# Medium-risk requires one "confirm"; high-risk requires full phrase
-high_risk_phrase = "confirm delete"
-medium_risk_phrase = "confirm"
-cancel_phrase = "cancel"
+# Medelrisk kräver ett "bekräfta"; hög risk kräver hela frasen
+high_risk_phrase = "bekräfta radera"
+medium_risk_phrase = "bekräfta"
+cancel_phrase = "avbryt"
 
 [dictation]
-# How text is injected into the focused window
+# Hur text matas in i det fokuserade fönstret
 # "xdotool" | "clipboard" | "auto"
 injection_method = "auto"
-# Words per minute typing simulation delay (0 = instant)
+# Fördröjning för simulerad skrivhastighet (ord per minut) (0 = direkt)
 typing_delay_ms = 0
 
 [ui]
-# Position of the overlay HUD: "top-right" | "top-left" | "bottom-right" | "bottom-left"
+# Position för overlay-HUD:en: "top-right" | "top-left" | "bottom-right" | "bottom-left"
 overlay_position = "top-right"
 overlay_opacity = 0.92
 theme = "dark"                   # "dark" | "light"
-show_transcription = true        # Show live transcription in overlay
+show_transcription = true        # Visa transkribering i realtid i overlayen
 font_size = 13
 
 [feedback]
 tts_enabled = true
 tts_engine = "espeak"            # "espeak" | "pyttsx3"
-tts_rate = 170                   # Words per minute
+tts_rate = 170                   # Ord per minut
 tts_volume = 0.9
 sound_effects = true
 
@@ -59,10 +63,10 @@ sound_effects = true
 level = "INFO"                   # "DEBUG" | "INFO" | "WARNING" | "ERROR"
 max_file_size_mb = 10
 backup_count = 3
-log_commands = true              # Write executed commands to audit log
+log_commands = true              # Skriv utförda kommandon till granskningsloggen
 
 [security]
-# Commands allowed through the shell executor (whitelist)
+# Kommandon tillåtna genom skalexekveraren (vitlista)
 shell_command_whitelist = [
     "loginctl",
     "systemctl",
@@ -72,18 +76,18 @@ shell_command_whitelist = [
     "locate",
     "find",
 ]
-# Require confirmation for any subprocess call
+# Kräv bekräftelse för varje anrop till underprocess
 always_confirm_shell = true
 
 [vscode]
 enabled = true
-# Path to VS Code binary
+# Sökväg till VS Code-binären
 binary = "code"
-# Default projects directory
+# Standardmapp för projekt
 projects_dir = "~/projects"
 
 [apps]
-# Application name aliases — maps spoken name → executable
+# Alias för applikationsnamn — mappar uttalat namn → körbar fil
 [apps.aliases]
 "firefox" = "firefox"
 "chrome" = "google-chrome"
@@ -102,7 +106,7 @@ projects_dir = "~/projects"
 "text editor" = "gedit"
 
 [folders]
-# Folder aliases — maps spoken name → path
+# Mappalias — mappar uttalat namn → sökväg
 [folders.aliases]
 "home" = "~"
 "desktop" = "~/Desktop"
