@@ -127,6 +127,23 @@ _GENERIC: dict[str, list[str]] = {
 _SYNONYMS = {
     "file manager": "files",
     "web browser": "browser",
+    # Swedish spoken names (config/default.toml keys) -> the English
+    # canonical keys used by _DESKTOP_PREFERRED / _GENERIC above. VoicePilot's
+    # grammar is Swedish, so this is what resolve_app() actually receives at
+    # runtime; without this mapping the desktop-environment fallback would
+    # never trigger for a Swedish alias whose configured binary is missing.
+    "filhanteraren": "files",
+    "filer": "files",
+    "terminalen": "terminal",
+    "textredigerare": "text editor",
+    "textredigeraren": "text editor",
+    "anteckningar": "text editor",
+    "inställningar": "settings",
+    "systeminställningar": "settings",
+    "kalkylator": "calculator",
+    "miniräknare": "calculator",
+    "webbläsaren": "browser",
+    "webbläsare": "browser",
 }
 
 

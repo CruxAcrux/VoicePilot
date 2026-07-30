@@ -134,38 +134,62 @@ class VSCodeSection(BaseModel):
 
 
 class AppsSection(BaseModel):
+    # Keys are the SPOKEN name — Swedish for generic concepts, English for
+    # product names that are said the same way in a Swedish sentence
+    # (firefox, spotify, slack, discord, chrome, vs code). Values are only
+    # the starting guess for resolve_app() in core/desktop.py, which picks
+    # the right binary for the running desktop environment (e.g. nemo on
+    # Cinnamon) when the configured one isn't installed. Keep in sync with
+    # config/default.toml.
     aliases: dict[str, str] = Field(
         default_factory=lambda: {
             "firefox": "firefox",
             "chrome": "google-chrome",
             "chromium": "chromium-browser",
+            "terminalen": "gnome-terminal",
             "terminal": "gnome-terminal",
-            "files": "nautilus",
-            "file manager": "nautilus",
+            "filhanteraren": "nautilus",
+            "filer": "nautilus",
             "vs code": "code",
             "vscode": "code",
             "code": "code",
             "slack": "slack",
             "discord": "discord",
             "spotify": "spotify",
-            "settings": "gnome-control-center",
-            "calculator": "gnome-calculator",
-            "text editor": "gedit",
+            "inställningar": "gnome-control-center",
+            "systeminställningar": "gnome-control-center",
+            "kalkylator": "gnome-calculator",
+            "miniräknare": "gnome-calculator",
+            "textredigerare": "gedit",
+            "textredigeraren": "gedit",
+            "anteckningar": "gedit",
+            "webbläsaren": "firefox",
+            "webbläsare": "firefox",
         }
     )
 
 
 class FoldersSection(BaseModel):
+    # Keys are the SPOKEN (Swedish) name; values are the real path on disk,
+    # which does NOT change just because the key is Swedish — most Linux
+    # installs with an English locale still have ~/Downloads, ~/Documents
+    # etc. on the filesystem. Keep in sync with config/default.toml.
     aliases: dict[str, str] = Field(
         default_factory=lambda: {
-            "home": "~",
-            "desktop": "~/Desktop",
-            "downloads": "~/Downloads",
-            "documents": "~/Documents",
-            "pictures": "~/Pictures",
-            "music": "~/Music",
-            "videos": "~/Videos",
-            "projects": "~/projects",
+            "hem": "~",
+            "hemmapp": "~",
+            "skrivbord": "~/Desktop",
+            "skrivbordet": "~/Desktop",
+            "nedladdningar": "~/Downloads",
+            "hämtade filer": "~/Downloads",
+            "hämtningar": "~/Downloads",
+            "dokument": "~/Documents",
+            "bilder": "~/Pictures",
+            "foton": "~/Pictures",
+            "musik": "~/Music",
+            "videor": "~/Videos",
+            "filmer": "~/Videos",
+            "projekt": "~/projects",
         }
     )
 
