@@ -97,19 +97,27 @@ class CommandInterpreter:
         # This prevents synonym expansion from breaking exact-phrase intents
         # (e.g. "start dictation" → synonym-expanded to "open dictation"
         # which would match 'open_application' instead of 'start_dictation').
-        candidates: list[tuple[float, Intent, str, dict]] = []
+        candidates: list[tuple[float, float, Intent, str, dict]] = []
 
         for candidate_text in dict.fromkeys([raw_text.lower().strip(), normalised]):
             for intent, pattern_str, regex in self._compiled:
-                score, slots = self._match(candidate_text, pattern_str, regex)
+                gate_score, rank_score, slots = self._match(
+                    candidate_text, pattern_str, regex
+                )
 
-                if score < self.confidence_threshold:
+                # The gate (threshold) decision uses the *unpenalised* score:
+                # a slot-less exact phrase like "kopiera texten" is a
+                # perfectly good match for "kopiera" on its own merits, and
+                # must not be disqualified just because it also happens to
+                # carry a ranking penalty (see _match). Ranking only matters
+                # once there is more than one candidate to choose between.
+                if gate_score < self.confidence_threshold:
                     continue
 
                 if not all(s in slots for s in intent.required_slots):
                     continue
 
-                candidates.append((score, intent, pattern_str, slots))
+                candidates.append((rank_score, gate_score, intent, pattern_str, slots))
 
         if not candidates:
             logger.info("No intent matched for: %r", raw_text)
@@ -120,16 +128,21 @@ class CommandInterpreter:
             )
             raise UnknownCommandError(raw_text)
 
-        # Pick the highest-scoring candidate; ties broken by list order (earlier = wins)
-        best_score, best_intent, best_pattern, best_slots = max(
+        # Pick the highest *ranking* score; ties broken by list order (earlier = wins).
+        # Ranking score is what discriminates "kör firefox" between the
+        # slot-less "kör" and the more specific "kör {app}" — see _match.
+        best_rank, best_gate, best_intent, best_pattern, best_slots = max(
             candidates, key=lambda c: c[0]
         )
 
+        # Reported confidence is the unpenalised (gate) score: the ranking
+        # penalty is an internal tie-breaking device, not a genuine measure
+        # of how well the winning pattern matched the text.
         cmd = ParsedCommand(
             intent=best_intent,
             slots=best_slots,
             raw_text=raw_text,
-            confidence=best_score,
+            confidence=best_gate,
             pattern_matched=best_pattern,
         )
 
@@ -141,7 +154,7 @@ class CommandInterpreter:
                 "intent": best_intent.name,
                 "slots": best_slots,
                 "risk": best_intent.risk.name,
-                "confidence": best_score,
+                "confidence": best_gate,
                 "raw_text": raw_text,
             },
             source=_SOURCE,
@@ -158,7 +171,7 @@ class CommandInterpreter:
         text: str,
         pattern_str: str,
         regex: re.Pattern[str],
-    ) -> tuple[float, dict[str, Any]]:
+    ) -> tuple[float, float, dict[str, Any]]:
         """
         Try to match *text* against *pattern_str*.
 
@@ -167,7 +180,27 @@ class CommandInterpreter:
           2. Fuzzy fallback — only for patterns with slots, and only when
              every static keyword from the pattern appears in the text.
 
-        Returns (score, slots).  Score is 0 if no match.
+        Returns (gate_score, rank_score, slots). Both scores are 0 if no
+        match.
+
+        Why two scores
+        --------------
+        A slot-less exact phrase (e.g. "kopiera") is compiled to
+        "^kopiera(\\s+.*)?$" — trailing text is allowed so that ASR filler
+        words ("kopiera texten") don't break the match. That trailing text
+        is, by definition, text the pattern did not account for, so it
+        should not let the phrase out-rank a more specific competing slot
+        pattern (e.g. "kör firefox" must prefer "kör {app}" over the
+        bare exact phrase "kör"). That's what `rank_score` penalises.
+
+        But most of the time a slot-less phrase with trailing filler is the
+        *only* candidate at all (e.g. "kopiera texten" has no competing
+        "kopiera {x}" pattern in the grammar). If the penalised score were
+        also used for the confidence-threshold gate, such phrases would be
+        rejected outright — even though nothing more specific was competing
+        for the match. So the gate uses the unpenalised `gate_score`, and
+        only the final ranking among *multiple* passing candidates uses the
+        penalised `rank_score`.
         """
         has_slots = bool(re.search(r"\{[^}]+\}", pattern_str))
         static = _static_portion(pattern_str)
@@ -184,52 +217,45 @@ class CommandInterpreter:
             slot_count = len(re.findall(r"\{[^}]+\}", pattern_str))
             n_static = len(static_words)
             if slot_count == 0:
-                # Slot-less patterns are exact phrases: "kör" should mean
-                # "kör" (or "kör" + a stray filler word), not "kör <anything>".
-                # The regex still allows trailing content — via the optional
-                # "(\s+.*)?" group — so ASR filler words ("stäng fönstret nu")
-                # don't break the match. But every word swallowed by that
-                # trailing group is a word the pattern did NOT account for,
-                # so it must not keep full specificity: otherwise a bare
-                # exact phrase like "kör" would out-score a more specific
-                # slot pattern like "kör {app}" on input "kör firefox",
-                # even though the slot pattern is the actually-correct match.
-                # Penalise proportionally to how much of the utterance was
-                # ignored, so a single filler word costs little but a
-                # swallowed slot value (a large fraction of the utterance)
-                # costs a lot.
+                # Exact phrases always pass the gate at full specificity —
+                # see the docstring above. The trailing-word penalty only
+                # ever affects `rank_specificity`.
+                gate_specificity = 1.0
                 trailing = m.groups()[-1] if m.groups() else None
                 if trailing:
                     trailing_words = len(trailing.split())
                     total_words = len(text.split())
                     ignored_fraction = trailing_words / max(total_words, 1)
-                    specificity = max(1.0 - ignored_fraction, 0.0)
+                    rank_specificity = max(1.0 - ignored_fraction, 0.0)
                 else:
-                    specificity = 1.0
+                    rank_specificity = 1.0
             else:
-                specificity = 0.7 + 0.3 * (n_static / max(n_static + slot_count, 1))
+                gate_specificity = rank_specificity = 0.7 + 0.3 * (
+                    n_static / max(n_static + slot_count, 1)
+                )
 
             base = fuzz.ratio(text, pattern_str)
-            score = (90.0 + base * 0.1) * specificity
-            return min(score, 100.0), slots
+            gate_score = min((90.0 + base * 0.1) * gate_specificity, 100.0)
+            rank_score = min((90.0 + base * 0.1) * rank_specificity, 100.0)
+            return gate_score, rank_score, slots
 
         # --- 2. Fuzzy fallback (slot patterns only) ---
         if not has_slots or not static_words:
-            return 0.0, {}
+            return 0.0, 0.0, {}
 
         # Require all static keywords to appear verbatim in the text
         text_lower = text.lower()
         if not all(w.lower() in text_lower for w in static_words):
-            return 0.0, {}
+            return 0.0, 0.0, {}
 
         score = float(fuzz.partial_ratio(static, text))
         if score < self.confidence_threshold:
-            return score, {}
+            return score, score, {}
 
         slots = _extract_slots_fuzzy(text, pattern_str)
         # Penalise fuzzy matches vs structural matches
         score *= 0.75
-        return score, slots
+        return score, score, slots
 
 
 # ---------------------------------------------------------------------------
