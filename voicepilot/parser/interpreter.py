@@ -183,9 +183,29 @@ class CommandInterpreter:
             # "open {X} folder" (2 static words, 1 slot).
             slot_count = len(re.findall(r"\{[^}]+\}", pattern_str))
             n_static = len(static_words)
-            # Patterns with no slots get full score (they are exact phrases).
             if slot_count == 0:
-                specificity = 1.0
+                # Slot-less patterns are exact phrases: "kör" should mean
+                # "kör" (or "kör" + a stray filler word), not "kör <anything>".
+                # The regex still allows trailing content — via the optional
+                # "(\s+.*)?" group — so ASR filler words ("stäng fönstret nu")
+                # don't break the match. But every word swallowed by that
+                # trailing group is a word the pattern did NOT account for,
+                # so it must not keep full specificity: otherwise a bare
+                # exact phrase like "kör" would out-score a more specific
+                # slot pattern like "kör {app}" on input "kör firefox",
+                # even though the slot pattern is the actually-correct match.
+                # Penalise proportionally to how much of the utterance was
+                # ignored, so a single filler word costs little but a
+                # swallowed slot value (a large fraction of the utterance)
+                # costs a lot.
+                trailing = m.groups()[-1] if m.groups() else None
+                if trailing:
+                    trailing_words = len(trailing.split())
+                    total_words = len(text.split())
+                    ignored_fraction = trailing_words / max(total_words, 1)
+                    specificity = max(1.0 - ignored_fraction, 0.0)
+                else:
+                    specificity = 1.0
             else:
                 specificity = 0.7 + 0.3 * (n_static / max(n_static + slot_count, 1))
 
