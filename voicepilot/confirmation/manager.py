@@ -117,7 +117,7 @@ class ConfirmationManager:
             )
         timer.start()
 
-        prompt = risk_message(command, risk)
+        prompt = risk_message(command, risk, self.config)
         self.on_speak(prompt)
 
         bus.publish_type(
@@ -162,8 +162,8 @@ class ConfirmationManager:
 
         # Unrecognised response — remind the user
         self.on_speak(
-            f"Please say '{required_phrase}' to confirm or "
-            f"'{self.config.cancel_phrase}' to cancel."
+            f"Säg '{required_phrase}' för att bekräfta eller "
+            f"'{self.config.cancel_phrase}' för att avbryta."
         )
         return True   # consumed — don't route to parser
 
@@ -208,7 +208,7 @@ class ConfirmationManager:
             "Command %r cancelled (reason=%s)", pending.command.intent_name, reason
         )
 
-        self.on_speak("Cancelled.")
+        self.on_speak("Avbrutet.")
 
         bus.publish_type(
             EventType.CONFIRMATION_CANCELLED,
@@ -235,7 +235,7 @@ class ConfirmationManager:
 
         logger.info("Confirmation timed out for %r", pending.command.intent_name)
 
-        self.on_speak("Confirmation timed out. Command cancelled.")
+        self.on_speak("Bekräftelsen tog för lång tid. Kommandot avbröts.")
 
         bus.publish_type(EventType.CONFIRMATION_TIMEOUT, source=_SOURCE)
 
@@ -266,7 +266,7 @@ class ConfirmationManager:
             outcome = "executed"
         except Exception as exc:
             logger.exception("Action execution failed: %s", exc)
-            self.on_speak(f"Sorry, that failed: {exc}")
+            self.on_speak(f"Förlåt, det misslyckades: {exc}")
             outcome = "failed"
             bus.publish_type(
                 EventType.ACTION_FAILED,

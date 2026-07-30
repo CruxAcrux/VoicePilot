@@ -41,7 +41,7 @@ class VSCodeAction(BaseAction):
 
     def __init__(
         self,
-        projects_dir: Path | str = "~/projects",
+        projects_dir: Path | str = "~/Projects",
         code_binary: str = "code",
     ) -> None:
         self.projects_dir = Path(projects_dir).expanduser()

@@ -157,10 +157,16 @@ class VoicePilotApp:
             # Still check for stop-dictation command
             if any(
                 phrase in text.lower()
-                for phrase in ["stop dictation", "end dictation", "command mode", "stop typing"]
+                for phrase in [
+                    "stoppa diktering",
+                    "avsluta diktering",
+                    "sluta diktera",
+                    "stoppa skrivläge",
+                    "kommandoläge",
+                ]
             ):
                 self._dictation_mode.stop()
-                self._speak("Dictation stopped.")
+                self._speak("Diktering avstängd.")
                 return
 
             try:
@@ -180,7 +186,7 @@ class VoicePilotApp:
             command = self._interpreter.parse(text)
         except UnknownCommandError:
             logger.info("Unknown command: %r", text)
-            self._speak("Sorry, I didn't understand that.")
+            self._speak("Förlåt, jag uppfattade inte det.")
             bus.publish_type(
                 EventType.UI_STATUS_UPDATE,
                 data={"state": "IDLE"},
@@ -191,12 +197,12 @@ class VoicePilotApp:
         # Handle dictation toggle at parse level
         if command.intent_name == "start_dictation":
             self._dictation_mode.start()
-            self._speak("Dictation mode started. Speak freely.")
+            self._speak("Dikteringsläge på. Prata fritt.")
             return
 
         if command.intent_name == "stop_dictation":
             self._dictation_mode.stop()
-            self._speak("Dictation stopped.")
+            self._speak("Diktering avstängd.")
             return
 
         # 4. Send to confirmation manager (handles risk classification + execution)
@@ -219,21 +225,21 @@ class VoicePilotApp:
     def _speak_completion(self, intent_name: str) -> None:
         """Provide brief spoken feedback on successful action."""
         completions = {
-            "open_application": "Opening.",
-            "close_application": "Closing.",
-            "create_folder": "Folder created.",
-            "create_file": "File created.",
-            "delete_file": "File deleted.",
-            "delete_folder": "Folder deleted.",
-            "lock_computer": "Locking screen.",
-            "shutdown": "Shutting down.",
-            "restart": "Restarting.",
-            "take_screenshot": "Screenshot taken.",
-            "minimize_window": "Minimized.",
-            "maximize_window": "Maximized.",
-            "close_window": "Window closed.",
+            "open_application": "Öppnar.",
+            "close_application": "Stänger.",
+            "create_folder": "Mapp skapad.",
+            "create_file": "Fil skapad.",
+            "delete_file": "Fil borttagen.",
+            "delete_folder": "Mapp borttagen.",
+            "lock_computer": "Låser skärmen.",
+            "shutdown": "Stänger av.",
+            "restart": "Startar om.",
+            "take_screenshot": "Skärmbild tagen.",
+            "minimize_window": "Minimerat.",
+            "maximize_window": "Maximerat.",
+            "close_window": "Fönster stängt.",
         }
-        msg = completions.get(intent_name, "Done.")
+        msg = completions.get(intent_name, "Klart.")
         self._speak(msg)
 
     # ------------------------------------------------------------------
@@ -278,6 +284,31 @@ class VoicePilotApp:
             engine = pyttsx3.init()
             engine.setProperty("rate", self.config.feedback.tts_rate)
             engine.setProperty("volume", self.config.feedback.tts_volume)
+
+            try:
+                voices = engine.getProperty("voices") or []
+                swedish_voice = next(
+                    (
+                        v
+                        for v in voices
+                        if "sv" in (v.id or "").lower()
+                        or "swedish" in (v.name or "").lower()
+                        or "svenska" in (v.name or "").lower()
+                    ),
+                    None,
+                )
+                if swedish_voice:
+                    engine.setProperty("voice", swedish_voice.id)
+                    logger.info("Using Swedish TTS voice: %s", swedish_voice.id)
+                else:
+                    logger.warning(
+                        "No Swedish pyttsx3 voice found — falling back to the "
+                        "default voice. Spoken feedback will sound wrong for "
+                        "Swedish text."
+                    )
+            except Exception as exc:
+                logger.debug("Could not select a Swedish voice: %s", exc)
+
             return engine
         except Exception as exc:
             logger.warning("pyttsx3 unavailable (%s) — TTS disabled", exc)
@@ -306,13 +337,21 @@ class VoicePilotApp:
                 # Fall back to a command-line speech synthesiser. espeak-ng is
                 # what current Debian/Ubuntu/Mint releases ship; plain espeak
                 # and spd-say cover older or differently-configured systems.
+                # espeak-ng/espeak support "-v sv" for a Swedish voice; spd-say
+                # has no equivalent per-call flag, so it speaks with whatever
+                # voice speech-dispatcher is configured with.
                 import shutil
                 import subprocess
 
-                for binary in ("espeak-ng", "espeak", "spd-say"):
+                commands = {
+                    "espeak-ng": ["espeak-ng", "-v", "sv", message],
+                    "espeak": ["espeak", "-v", "sv", message],
+                    "spd-say": ["spd-say", message],
+                }
+                for binary, argv in commands.items():
                     if shutil.which(binary):
                         subprocess.run(
-                            [binary, message],
+                            argv,
                             capture_output=True,
                             timeout=10,
                         )

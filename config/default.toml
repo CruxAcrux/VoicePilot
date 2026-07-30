@@ -84,7 +84,7 @@ enabled = true
 # Sökväg till VS Code-binären
 binary = "code"
 # Standardmapp för projekt
-projects_dir = "~/projects"
+projects_dir = "~/Projects"
 
 [apps]
 # Alias för applikationsnamn — mappar UTTALAT namn (svenska) → körbar fil.
@@ -141,4 +141,4 @@ projects_dir = "~/projects"
 "musik" = "~/Music"
 "videor" = "~/Videos"
 "filmer" = "~/Videos"
-"projekt" = "~/projects"
+"projekt" = "~/Projects"

@@ -2,8 +2,10 @@
 Wake word detector wrapping openwakeword.
 
 openwakeword is a fully local, trainable wake-word detection library.
-The bundled "hey_mycroft" model is used by default; a custom "hey_pilot"
-model can be trained and placed in the models/ directory.
+The configured wake word (config/default.toml `speech.wake_word`, e.g.
+"hey jarvis") is mapped to a single matching pretrained model — only that
+one model is loaded, never the full openwakeword bundle. A custom model
+can also be trained and placed in the models/ directory to override this.
 
 When a wake word is detected, EventType.WAKE_WORD_DETECTED is published
 and the registered callback fires.
@@ -28,6 +30,23 @@ _SOURCE = "wake_word"
 
 # Path where custom wake word models are stored
 _MODELS_DIR = Path(__file__).parent.parent.parent / "models"
+
+# Maps a configured wake word (normalised: lowercase, spaces → underscores)
+# to the openwakeword pretrained model file that implements it. openwakeword
+# ships several unrelated pretrained models (alexa, hey_mycroft, hey_rhasspy,
+# timer, weather) in the same resources/ directory; loading Model() with no
+# arguments loads ALL of them, so the detector fires on "Alexa" and other
+# unrelated words too. Only the model matching the configured wake word is
+# loaded.
+_PRETRAINED_MODELS: dict[str, str] = {
+    "hey_jarvis": "hey_jarvis_v0.1.onnx",
+    "alexa": "alexa_v0.1.onnx",
+    "hey_mycroft": "hey_mycroft_v0.1.onnx",
+    "hey_rhasspy": "hey_rhasspy_v0.1.onnx",
+    "timer": "timer_v0.1.onnx",
+    "weather": "weather_v0.1.onnx",
+}
+_DEFAULT_PRETRAINED = "hey_jarvis_v0.1.onnx"
 
 
 class WakeWordDetector:
@@ -97,13 +116,31 @@ class WakeWordDetector:
                     # The bundled models are not shipped in the wheel; they are
                     # fetched once on first use.
                     self._ensure_pretrained_models()
-                    # Fall back to a bundled openwakeword model
+
+                    import openwakeword  # type: ignore[import]
+
+                    models_dir = (
+                        Path(openwakeword.__file__).parent / "resources" / "models"
+                    )
+                    pretrained_path = models_dir / self._resolve_pretrained_filename()
+
+                    if not pretrained_path.exists():
+                        raise WakeWordError(
+                            f"Pretrained wake word model not found: {pretrained_path}"
+                        )
+
                     logger.info(
-                        "No custom model found for %r — using 'alexa' as stand-in. "
-                        "Train a custom 'hey_pilot' model for production.",
+                        "Loading pretrained wake word model %r for wake_word=%r "
+                        "(only this model is loaded — not the full openwakeword "
+                        "bundle, which would also fire on 'alexa', 'hey mycroft', "
+                        "'hey rhasspy', 'timer' and 'weather')",
+                        pretrained_path.name,
                         self.wake_word,
                     )
-                    self._model = Model(inference_framework="onnx")
+                    self._model = Model(
+                        wakeword_models=[str(pretrained_path)],
+                        inference_framework="onnx",
+                    )
 
                 logger.info("Wake word detector loaded (threshold=%.2f)", self.threshold)
 
@@ -144,6 +181,26 @@ class WakeWordDetector:
         )
         download_models()
         logger.info("Wake word models downloaded")
+
+    def _resolve_pretrained_filename(self) -> str:
+        """
+        Map the configured wake word to a pretrained openwakeword model
+        filename, with a clearly-logged fallback to hey_jarvis if the word
+        is not one of openwakeword's pretrained options.
+        """
+        key = self.wake_word.strip().lower().replace(" ", "_")
+        filename = _PRETRAINED_MODELS.get(key)
+        if filename is not None:
+            return filename
+
+        logger.warning(
+            "Wake word %r has no matching pretrained openwakeword model "
+            "(available: %s) — falling back to %r.",
+            self.wake_word,
+            ", ".join(sorted(_PRETRAINED_MODELS)),
+            _DEFAULT_PRETRAINED,
+        )
+        return _DEFAULT_PRETRAINED
 
     def _resolve_model_path(self) -> Path | None:
         """Look for a custom .onnx model matching the wake word."""

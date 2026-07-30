@@ -125,7 +125,7 @@ class SecuritySection(BaseModel):
 class VSCodeSection(BaseModel):
     enabled: bool = True
     binary: str = "code"
-    projects_dir: Path = Path("~/projects")
+    projects_dir: Path = Path("~/Projects")
 
     @field_validator("projects_dir", mode="before")
     @classmethod
@@ -189,7 +189,7 @@ class FoldersSection(BaseModel):
             "musik": "~/Music",
             "videor": "~/Videos",
             "filmer": "~/Videos",
-            "projekt": "~/projects",
+            "projekt": "~/Projects",
         }
     )
 
