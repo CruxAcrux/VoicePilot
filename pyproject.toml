@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voicepilot"
+version = "0.1.0"
+description = "Voice-controlled assistant for Linux — hands-free computer interaction"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "VoicePilot Contributors" }]
+keywords = ["voice", "accessibility", "linux", "speech", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Accessibility",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+dependencies = [
+    "tomli>=2.0; python_version < '3.11'",
+    "faster-whisper>=1.0.0",
+    "onnxruntime>=1.17",
+    "sounddevice>=0.4.6",
+    "numpy>=1.26",
+    "pynput>=1.7.6",
+    "psutil>=5.9",
+    "PyQt6>=6.6.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "rapidfuzz>=3.6.0",
+    "SQLAlchemy>=2.0",
+    "toml>=0.10.2",
+    "pyttsx3>=2.90",
+    "openwakeword>=0.6.0",
+    "pyperclip>=1.8.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-qt>=4.3",
+    "pytest-asyncio>=0.23",
+    "black>=24.0",
+    "ruff>=0.3",
+    "mypy>=1.9",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+voicepilot = "voicepilot.main:main"
+
+[project.urls]
+Homepage = "https://github.com/voicepilot/voicepilot"
+Issues = "https://github.com/voicepilot/voicepilot/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["voicepilot*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
