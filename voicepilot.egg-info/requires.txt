@@ -1,0 +1,27 @@
+faster-whisper>=1.0.0
+onnxruntime>=1.17
+sounddevice>=0.4.6
+numpy>=1.26
+pynput>=1.7.6
+psutil>=5.9
+PyQt6>=6.6.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+rapidfuzz>=3.6.0
+SQLAlchemy>=2.0
+toml>=0.10.2
+pyttsx3>=2.90
+openwakeword>=0.6.0
+pyperclip>=1.8.2
+
+[:python_version < "3.11"]
+tomli>=2.0
+
+[dev]
+pytest>=8.0
+pytest-qt>=4.3
+pytest-asyncio>=0.23
+black>=24.0
+ruff>=0.3
+mypy>=1.9
+pre-commit>=3.7
