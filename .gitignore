@@ -52,3 +52,4 @@ logs/
 # (.claude/settings.json versionshanteras, men inte den lokala varianten)
 # =============================================================================
 .claude/settings.local.json
+.claude
