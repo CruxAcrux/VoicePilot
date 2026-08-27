@@ -1,0 +1,21 @@
+# Runtime dependencies
+# tomli is only needed on Python < 3.11 (3.11+ has tomllib in stdlib)
+tomli>=2.0; python_version < "3.11"
+faster-whisper>=1.0.0
+# Runs both the silero VAD (bundled inside faster-whisper) and the
+# openwakeword models. Pulled in by faster-whisper too, but VoicePilot
+# imports it directly, so it is declared here rather than relied upon.
+onnxruntime>=1.17
+sounddevice>=0.4.6
+numpy>=1.26
+pynput>=1.7.6
+psutil>=5.9
+PyQt6>=6.6.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+rapidfuzz>=3.6.0
+SQLAlchemy>=2.0
+toml>=0.10.2
+pyttsx3>=2.90
+openwakeword>=0.6.0
+pyperclip>=1.8.2

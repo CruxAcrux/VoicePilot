@@ -1,0 +1,144 @@
+# VoicePilot — Standardkonfiguration
+# Denna fil läses in vid första start. Användarens egna inställningar sparas i ~/.config/voicepilot/config.toml
+
+[app]
+name = "VoicePilot"
+version = "0.1.0"
+data_dir = "~/.local/share/voicepilot"
+log_dir = "~/.local/share/voicepilot/logs"
+
+[speech]
+# Aktiveringsläge: "wake_word" | "push_to_talk" | "always_on"
+activation_mode = "wake_word"
+# Aktiveringsfras (wake word). Finns ingen tränad svensk modell i openwakeword,
+# så denna förblir engelsk även om resten av kommandona är på svenska.
+wake_word = "hey jarvis"
+# Whisper-modell: måste vara flerspråkig för att kunna transkribera svenska.
+# "base.en" är engelsk-only och duger inte. "small" är minsta flerspråkiga
+# modell som klarar korta svenska kommandon tillförlitligt.
+whisper_model = "small"
+whisper_device = "cpu"           # "cpu" | "cuda"
+whisper_compute_type = "int8"    # "int8" | "float16" | "float32"
+language = "sv"
+# Mikrofonindex — låt vara utkommenterad för att använda systemets standardenhet.
+# TOML saknar null-literalen; en okommenterad, ej satt nyckel är hur "inget värde" uttrycks.
+# microphone_index = 1
+sample_rate = 16000
+vad_threshold = 0.5              # Känslighet för röstaktivitetsdetektering (0.0–1.0)
+# Tystnadens längd (sekunder) innan talsegmentet slutförs
+silence_duration = 1.2
+max_recording_seconds = 30
+
+[confirmation]
+# Timeout (sekunder) att vänta på röstbekräftelse innan automatisk avbrytning
+timeout_seconds = 10
+# Medelrisk kräver ett "bekräfta"; hög risk kräver hela frasen
+high_risk_phrase = "bekräfta radera"
+medium_risk_phrase = "bekräfta"
+cancel_phrase = "avbryt"
+
+[dictation]
+# Hur text matas in i det fokuserade fönstret
+# "xdotool" | "clipboard" | "auto"
+injection_method = "auto"
+# Fördröjning för simulerad skrivhastighet (ord per minut) (0 = direkt)
+typing_delay_ms = 0
+
+[ui]
+# Position för overlay-HUD:en: "top-right" | "top-left" | "bottom-right" | "bottom-left"
+overlay_position = "top-right"
+overlay_opacity = 0.92
+theme = "dark"                   # "dark" | "light"
+show_transcription = true        # Visa transkribering i realtid i overlayen
+font_size = 13
+
+[feedback]
+tts_enabled = true
+tts_engine = "espeak"            # "espeak" | "pyttsx3"
+tts_rate = 170                   # Ord per minut
+tts_volume = 0.9
+sound_effects = true
+
+[logging]
+level = "INFO"                   # "DEBUG" | "INFO" | "WARNING" | "ERROR"
+max_file_size_mb = 10
+backup_count = 3
+log_commands = true              # Skriv utförda kommandon till granskningsloggen
+
+[security]
+# Kommandon tillåtna genom skalexekveraren (vitlista)
+shell_command_whitelist = [
+    "loginctl",
+    "systemctl",
+    "xdg-open",
+    "wmctrl",
+    "xdotool",
+    "locate",
+    "find",
+]
+# Kräv bekräftelse för varje anrop till underprocess
+always_confirm_shell = true
+
+[vscode]
+enabled = true
+# Sökväg till VS Code-binären
+binary = "code"
+# Standardmapp för projekt
+projects_dir = "~/Projects"
+
+[apps]
+# Alias för applikationsnamn — mappar UTTALAT namn (svenska) → körbar fil.
+# Produktnamn (firefox, spotify, slack, discord, chrome, vs code) uttalas
+# likadant i en svensk mening och behålls därför som engelska nycklar.
+# Generiska begrepp ("filhanteraren", "terminalen" osv.) har svenska nycklar
+# eftersom det är dem användaren faktiskt säger.
+# Värdet nedan är bara startgissningen för resolve_app() i core/desktop.py,
+# som väljer rätt binär för den körande skrivbordsmiljön (t.ex. nemo på
+# Cinnamon) om den konfigurerade binären inte finns installerad.
+[apps.aliases]
+"firefox" = "firefox"
+"chrome" = "google-chrome"
+"chromium" = "chromium-browser"
+"terminalen" = "gnome-terminal"
+"terminal" = "gnome-terminal"
+"filhanteraren" = "nautilus"
+"filer" = "nautilus"
+"vs code" = "code"
+"vscode" = "code"
+"code" = "code"
+"slack" = "slack"
+"discord" = "discord"
+"spotify" = "spotify"
+"inställningar" = "gnome-control-center"
+"systeminställningar" = "gnome-control-center"
+"kalkylator" = "gnome-calculator"
+"miniräknare" = "gnome-calculator"
+"textredigerare" = "gedit"
+"textredigeraren" = "gedit"
+"anteckningar" = "gedit"
+"webbläsaren" = "firefox"
+"webbläsare" = "firefox"
+
+[folders]
+# Mappalias — mappar UTTALAT namn (svenska) → sökväg på disk.
+# Sökvägarna ändras INTE bara för att nyckeln blir svensk: den här maskinen
+# (och de flesta Linux-installationer med engelsk locale) har mappar som
+# fortfarande heter ~/Downloads, ~/Documents osv. på filsystemet — det är
+# bara vad man SÄGER som är svenskt. Har din maskin svenska mappnamn
+# (t.ex. ~/Hämtningar, ~/Skrivbord från en sv_SE-installation) skriver du
+# över dessa i ~/.config/voicepilot/config.toml.
+[folders.aliases]
+"hem" = "~"
+"hemmapp" = "~"
+"skrivbord" = "~/Desktop"
+"skrivbordet" = "~/Desktop"
+"nedladdningar" = "~/Downloads"
+"hämtade filer" = "~/Downloads"
+"hämtningar" = "~/Downloads"
+"dokument" = "~/Documents"
+"bilder" = "~/Pictures"
+"foton" = "~/Pictures"
+"musik" = "~/Music"
+"videor" = "~/Videos"
+"filmer" = "~/Videos"
+"projekt" = "~/Projects"
